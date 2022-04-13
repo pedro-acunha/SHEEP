@@ -87,3 +87,103 @@ metric_scores(y_test['class'],multiclass_pred['hard_vote'])
 
 ## Save predictions
 multiclass_pred.to_csv('./Data/Clf_multiclass.csv', index=True)
+
+# Outlier detection
+
+def flag_cat_outliers(x, var1, var2):
+  """Identifies catastrophic outliers and flags them
+    # x (DataFrame): Data to verify outliers
+    # var1 (string): ground-truth variable
+    # var2 (string): predicted variable
+    """
+    met = np.abs(pd.Series(x[var2]-x[var1]))
+    f_out = met/(1+x[var1].astype(np.float32))
+    y_outlier = pd.Series(np.where(f_out > 0.15, 0, 1)).reindex(x.index)
+    return y_outlier
+  
+  def act_learn_outlier(model,x_train, y_train, x_test, y_test):
+    """Dection of outliers
+     model: ML model to be used
+     x_train: training features
+     y_train: training target
+     x_test: testing features
+     y_test: testing target
+    """
+    model.fit(x_train, y_train['flag_outlier'])
+    print('Outlier model fit done!')
+    outliers = pd.DataFrame(model.predict(x_test), index=x_test.index, columns=['flag'])
+    print(metric_scores(y_test['flag_outlier'],outliers['flag']))
+    print('Outlier predictions completed!')
+    indices = outliers[outliers['flag']==0].index.to_list()
+    x_test = x_test.drop(indices)
+    y_test = y_test.drop(indices)
+    print('Potential catastrophic outliers exterminated!')
+    return x_test, y_test
+
+def clf_act_learn (model_clf, model_out,df, features, targets):
+  """Multi-class model with outlier detection and removal
+     model_clf: ML model to be used for classification
+     model_clf: ML model to be used for outlier detection
+     features: list of features names
+     features: list of targets names
+     x_test: testing features
+     y_test: testing target
+    """
+    X_train, X_test, y_train, y_test = train_test_split(df[features], 
+                                                    df[targets], 
+                                                    test_size=0.3, 
+                                                    shuffle =True, 
+                                                    random_state=0)
+    print('Train Test Split finished.')
+    model_clf.fit(X_train.astype(np.float32),y_train['class'].astype(np.int32))
+    print('Model fit done!')
+    pred = model_clf.predict(X_test.astype(np.float32))
+    print('Model predictions completed!')
+    test_y = y_test['class'].reset_index(drop=True)
+    print(metric_scores(test_y,pred))
+    
+    print('Active learning mode activated!')
+    X_test_al, y_test_al = act_learn_outlier(model_out,X_train, y_train, X_test, y_test)
+    print('Active learning mode completed!')
+    new_pred = model_clf.predict(X_test_al.astype(np.float32))
+    print('New predictions!')
+    y_test_al = y_test_al['class'].reset_index(drop=True)
+    print(metric_scores(y_test_al,new_pred))
+    
+    return X_train, X_test, y_train, y_test, pred, new_pred, X_test_al, y_test_al
+
+  
+ # Flag outliers for training
+df['flag_outlier']= flag_cat_outliers(df, 'z', 'imp_z')
+
+targets.append('flag_outlier')
+
+X_train, X_test, y_train, y_test = train_test_split(df[features], 
+                                                    df[targets], 
+                                                    test_size=0.5, 
+                                                    shuffle =True, 
+                                                    random_state=0)
+
+## Models optimised using FLAML
+xgb_out = xgb.XGBClassifier(n_estimators= 4, max_leaves= 4, min_child_weight= 0.9999999999999993,
+                            learning_rate= 0.09999999999999995, subsample= 1.0, colsample_bylevel= 1.0,
+                            colsample_bytree= 1.0, reg_alpha= 0.0009765625, reg_lambda= 1.0,
+                            tree_method='gpu_hist', validate_parameters=1, verbosity=None)
+
+xgb_clf = xgb.XGBClassifier(base_score=0.5, booster='gbtree',
+              colsample_bylevel=0.5241738682334621, colsample_bynode=1,
+              colsample_bytree=0.671168787703373, gamma=0, gpu_id=-1,
+              grow_policy='lossguide', importance_type='gain',
+              interaction_constraints='', learning_rate=0.07438542233856403,
+              max_delta_step=0, max_depth=0, max_leaves=605,
+              min_child_weight=45.13563288392657, missing=-9999.0,
+              monotone_constraints='()', n_estimators=150, n_jobs=-1,
+              num_parallel_tree=1, objective='multi:softprob', random_state=0,
+              reg_alpha=0.0009765625, reg_lambda=0.6112274550663784,
+              scale_pos_weight=None, subsample=0.8977673953174077,
+              use_label_encoder=False,validate_parameters=1, verbosity=0,
+              tree_method='gpu_hist')
+
+X_train, X_test, y_train, y_test, pred, new_pred, X_test_al, y_test_al = clf_act_learn (xgb_clf, xgb_out, df, features, targets)
+
+#Save files here.
