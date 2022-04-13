@@ -5,6 +5,7 @@ Our approach uses SDSS and WISE photometry, however others types of data (if tab
 You can read the paper here: https://arxiv.org/pdf/2204.02080.pdf .
 
 ## How to use
+This work was made using Jupyter Notebook. For visualisation, I recommend you use it as well.
 
 ### Data
 
