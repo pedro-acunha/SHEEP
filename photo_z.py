@@ -49,10 +49,10 @@ def metric_scores_rgr(x,y):
     pass
   
   def plot_feature_importance(importance,names,model_type):
-    """Computes the NMAD, bias, outlier fraction for the regression tasks
-  importance: feature importance data
-  names: features name
-  model_type: Name of the model for the plot title
+    """Plots feature importance
+    importance: features importance output from model
+    names: features names
+    model_type: name of the model used to compute features importance
   """
     
     #Create arrays from feature importance and feature names
@@ -76,8 +76,12 @@ def metric_scores_rgr(x,y):
     plt.ylabel('Feature Names')
     
 def create_rgr_plot(y_test, z_pred, var, title):
-    # Plot predictions vs ground-truth
-    cmap="Paired"
+"""Plots ground-truth vs predictions
+    y_test: ground-truth data
+    z_pred: predictions data
+    var: variable to be compared
+    title: plot title
+  """    cmap="Paired"
     plt.figure()
     a=plt.scatter(y_test[var], pd.Series(z_pred), c=y_test['class'],
              cmap=cmap,  edgecolors=(0, 0, 0), s=60, alpha = 1)
@@ -92,6 +96,14 @@ def create_rgr_plot(y_test, z_pred, var, title):
     return plt
   
   def ml_model(model, X_train, y_train, X_test, y_test, var):
+""" Fit model, predicts feature, print scores
+    model: model to be used (XGBoost, CatBoost, LightGBM, etc)
+    X_train: Training features
+    y_train: Training target
+    X_test: Testing features
+    y_test: Testing target
+    var: name of the target in the dataset
+  """    
     try:
         model.fit(X_train.astype(np.float32),y_train[var])
         pred = model.predict(X_test.astype(np.float32))
@@ -110,3 +122,123 @@ def create_rgr_plot(y_test, z_pred, var, title):
         features_importances = []
 
     return pred, features_importances
+
+  
+# Read data
+df = pd.read_parquet('Yourfilename.parquet')
+  
+# Create features
+features = df.columns.to_list()
+features.remove('class')
+features.remove('z')
+features.remove('specObjID')
+
+targets = ['z']
+
+# Train Test Split
+X_train, X_test, y_train, y_test = skl_train_test_split(df[features], 
+                                                    df[targets], 
+                                                    test_size=0.3, 
+                                                    shuffle =True, 
+                                                    random_state=24)
+
+#Spectroscopic redshift estimation
+
+## Individual Analysis
+### XGBoost
+xgb_clf = xgb.XGBRegressor(n_estimators=1500, n_jobs=-1,tree_method='gpu_hist', random_state=24)
+
+xgb_pred, xgb_feat_importance = ml_model(xgb_clf, X_train, y_train, X_test, y_test, 'z')
+
+create_rgr_plot(y_test, xgb_pred, 'z', 'XGB, predicted spec_z')
+
+plot_feature_importance(xgb_feat_importance,features,'XGBoost')
+
+### CatBoost
+
+train_pool = Pool(X_train, y_train['z'], feature_names=features)
+test_pool = Pool(X_test, y_test['z'], feature_names=features)
+
+cb_model = CatBoostRegressor(iterations=1500, max_depth=10, task_type="GPU",random_seed=0, verbose=0)
+                          
+cb_model.fit(train_pool)
+z_cb_pred = cb_model.predict(X_test.astype(np.float32))
+
+metric_scores_rgr(y_test['z'].reset_index(drop=True), z_cb_pred) #Metrics
+
+plot_feature_importance(cb_model.get_feature_importance(),features,'CatBoost')
+
+create_rgr_plot(y_test, xgb_pred, 'z', 'CatBoost, predicted spec_z')
+
+### LightGBM
+
+lgb_clf = lgb.LGBMRegressor(n_estimators=1500,random_seed=0, verbose=0)
+                          
+lgb_pred, lgb_feat_importance = ml_model(lgb_clf, X_train, y_train, X_test, y_test, 'z')
+
+plot_feature_importance(lgb_feat_importance,features,'LightGBM')
+
+create_rgr_plot(y_test, lgb_pred, 'z', 'LightGBM, predicted spec_z')
+
+## OOF Predictions
+
+models = {'xgb':xgb.XGBRegressor(n_estimators=1500, n_jobs=-1,tree_method='gpu_hist', random_state=24),
+        'cb':CatBoostRegressor(iterations=1500, task_type="GPU",random_seed=0, verbose=0),
+        'lgb':lgb.LGBMRegressor(n_estimators=1500,random_seed=0, verbose=0)}
+
+train_meta = pd.DataFrame(index=X_train.index,columns=[*models])
+test_meta = pd.DataFrame(index=X_test.index,columns=[*models])
+
+for i, model_name in enumerate([*models]):
+    if i==0: print('Starting OOF predictions for all models. \n')
+    train_meta[model_name], test_meta[model_name] = kf_oof(models[model_name],X_train,y_train,X_test,'z', nkf=5)
+    print('Predictions for '+str(model_name)+' done!')
+    
+test_predictions = pd.DataFrame(test_meta['average'], index=X_test.index)
+train_predictions = pd.DataFrame(train_meta['average'], index=X_train.index)
+
+oof_z_spec_pred = pd.concat([train_predictions,test_predictions],axis=0).sort_index()
+
+oof_z_spec_pred.to_csv('./Data/oof_z_pred_v1.csv', index=True)
+
+# Photo_z predictions correction
+df_z = pd.read_csv('./Data/oof_z_pred_v1.csv')
+
+df = pd.merge(df,df_z, left_index=True, right_index=True) # Merge photometric predictions with initial data
+
+## Create features
+features = df.columns.to_list()
+features.remove('class')
+features.remove('z')
+features.remove('specObjID')
+
+targets = ['class','z','specObjID']
+
+X_train, X_test, y_train, y_test = skl_train_test_split(df[features], 
+                                                    df[targets], 
+                                                    test_size=0.3, 
+                                                    shuffle =True, 
+                                                    random_state=24)
+
+models = {'xgb':xgb.XGBRegressor(n_estimators=1500, n_jobs=-1,tree_method='gpu_hist', random_state=24),
+        'cb':CatBoostRegressor(iterations=1500, task_type="GPU",random_seed=0, verbose=0),
+        'lgb':lgb.LGBMRegressor(n_estimators=1500,random_seed=0, verbose=0)}
+
+train_meta = pd.DataFrame(index=X_train.index,columns=[*models])
+test_meta = pd.DataFrame(index=X_test.index,columns=[*models])
+
+for i, model_name in enumerate([*models]):
+    if i==0: print('Starting OOF predictions for all models. \n')
+    train_meta[model_name], test_meta[model_name] = kf_oof(models[model_name],X_train,y_train,X_test,'z', nkf=5)
+    print('Predictions for '+str(model_name)+' done!')
+    
+# let's take a look at the features for training our meta learner:
+test_meta['average'] = test_meta[[*models]].mean(axis=1)
+train_meta['average'] = train_meta[[*models]].mean(axis=1)
+
+test_predictions = pd.DataFrame(test_meta['average'], index=X_test.index)
+train_predictions = pd.DataFrame(train_meta['average'], index=X_train.index)
+
+oof_z_spec_pred = pd.concat([train_predictions,test_predictions],axis=0).sort_index()
+
+oof_z_spec_pred.to_csv('./Data/oof_z_pred_v2.csv', index=True)
