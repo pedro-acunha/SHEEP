@@ -88,6 +88,36 @@ def clf_act_learn (model_clf, model_out,df, features, targets):
     
     return X_train, X_test, y_train, y_test, pred, new_pred, X_test_al, y_test_al
 
+def ml_model(model, X_train, y_train, X_test, y_test, var):
+  """ Fit model, predicts feature, print scores
+    model: model to be used (XGBoost, CatBoost, LightGBM, etc)
+    X_train: Training features
+    y_train: Training target
+    X_test: Testing features
+    y_test: Testing target
+    var: name of the target in the dataset
+  """    
+    try:
+        model.fit(X_train.astype(np.float32),y_train[var])
+        pred = model.predict(X_test.astype(np.float32))
+        pred_proba = model.predict_proba(X_test.astype(np.float32))
+        test_y = y_test[var].reset_index(drop=True)
+        print(metric_scores(test_y,pred))
+    except:
+        
+        model.fit(X_train.to_pandas().astype(np.float32),y_train[var].to_pandas())
+        pred = model.predict(X_test.to_pandas().astype(np.float32))
+        pred_proba = model.predict_proba(X_test.to_pandas().astype(np.float32))
+        test_y = y_test[var].to_pandas().reset_index(drop=True)
+        print(metric_scores(test_y,pred))
+    pass
+    
+    try:
+        features_importances = model.feature_importances_
+    except:
+        features_importances = []
+
+    return pred, pred_proba, features_importances
   
 # Read dataframe
 df = pd.read_pickle('./Yourfilehere.pkl')
