@@ -11,7 +11,7 @@ This work was made using Jupyter Notebook. For visualisation, I recommend you us
 
 To create the data you can use the SQL queries provided in the file "sql_query_casjobs". The data can be retrieved from https://skyserver.sdss.org/CasJobs/ .
 
-All the feature engineering process can be seen in the file "create_data.py". Feel free to play you the process, creating and eliminating features as needed.
+All the feature engineering process can be seen in the file "create_data.py". Make the necessary changes, creating and eliminating features, as needed for your project.
 
 ### Photo-z predictions
 
