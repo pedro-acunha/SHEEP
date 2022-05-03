@@ -1,5 +1,5 @@
 SELECT p.specObjID,p.ra, p.dec, p.mjd, p.plate, p.fiberID, p.modelMag_u, p.modelMag_g, p.modelMag_r, p.modelMag_i, p.modelMag_z,
-p.cmodelMag_u, p.cmodelMag_g, p.cmodelMag_r, p.cmodelMag_i, p.cmodelMag_z, p.psfMag_u, p.psfMag_g, p.psfMag_r, p.psfMag_i, p.psfMag_z, w.w1mpro, w.w2mpro, w.w3mpro, w.w4mpro, p.z into mydb.SDSS_DR15
+p.cmodelMag_u, p.cmodelMag_g, p.cmodelMag_r, p.cmodelMag_i, p.cmodelMag_z, p.psfMag_u, p.psfMag_g, p.psfMag_r, p.psfMag_i, p.psfMag_z, w.w1mpro, w.w2mpro, w.w3mpro, w.w4mpro, p.z, p.class into mydb.SDSS_DR15
   
 FROM dr15.SpecPhotoAll AS p
 JOIN dr15.wise_xmatch AS x ON p.objID = x.sdss_objid
