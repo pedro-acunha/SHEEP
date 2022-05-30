@@ -48,7 +48,7 @@ def metric_scores_rgr(x,y):
     print('\n R2 Test: \n', r2_score(x, y))
     pass
   
-  def plot_feature_importance(importance,names,model_type):
+def plot_feature_importance(importance,names,model_type):
     """Plots feature importance
     importance: features importance output from model
     names: features names
@@ -95,7 +95,7 @@ def create_rgr_plot(y_test, z_pred, var, title):
     
     return plt
   
-  def ml_model(model, X_train, y_train, X_test, y_test, var):
+def ml_model(model, X_train, y_train, X_test, y_test, var):
 """ Fit model, predicts feature, print scores
     model: model to be used (XGBoost, CatBoost, LightGBM, etc)
     X_train: Training features
@@ -123,6 +123,37 @@ def create_rgr_plot(y_test, z_pred, var, title):
 
     return pred, features_importances
 
+def kf_oof(clf,X_train,y_train,X_test, var,nkf):
+""" Predictions using k-fold cross-validation
+    clf: model to be used (XGBoost, CatBoost, LightGBM, etc)
+    X_train: Training features
+    y_train: Training target
+    X_test: Testing features
+    var: Feature to be predicted
+    nkf: number of partitions/folds 
+  """   
+    kf= RepeatedKFold(n_splits=5,random_state=42)
+    kf.get_n_splits(features)
+
+    oof_predictions = np.zeros(len(X_train))
+    oof_test_predictions = np.zeros(len(X_test))
+    i=0
+    
+    for train_index, holdout_index in kf.split(X_train, y_train[var]):
+        i+=1
+
+        clf.fit(X_train.iloc[train_index], y_train[var].iloc[train_index])
+    
+        y_pred = clf.predict(X_train.iloc[holdout_index])
+        oof_predictions[holdout_index] = y_pred
+    
+        y_test_pred = clf.predict(X_test)
+        oof_test_predictions += y_test_pred
+        print("For cycle loop:",i)
+        
+
+    oof_test_predictions = oof_test_predictions/i
+    return oof_predictions, oof_test_predictions
   
 # Read data
 df = pd.read_parquet('Yourfilename.parquet')
