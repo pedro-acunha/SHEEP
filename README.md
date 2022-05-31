@@ -1,4 +1,4 @@
-<image src="SHEEP.png" width="380" align="left"/> 
+<image src="SHEEP.png" width="400" align="left"/> 
 
 # SHEEP pipeline
 Photometric redshift-aided classification pipeline using ensemble learning to classify astronomical sources into galaxies, quasars and stars.
