@@ -1,9 +1,7 @@
 <image src="SHEEP.png" width="400" align="left"/> 
 
-# SHEEP: ML pipeline for astronomy classification
+# SHEEP: an ML pipeline for astronomy classification
 Photometric redshift-aided classification pipeline using ensemble learning to classify astronomical sources into galaxies, quasars and stars.
-<br>
-<br>
 <br>
 <br>
 <br>
