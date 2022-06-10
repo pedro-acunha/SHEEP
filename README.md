@@ -11,7 +11,8 @@ Our approach uses SDSS and WISE photometry, however others types of data (if tab
 You can read the paper here: https://arxiv.org/pdf/2204.02080.pdf .
 
 ## How to use
-This work was made using Jupyter Notebook. For visualisation, I recommend you use it as well.
+This work was made using Python and Jupyter Notebook. For better visualisation and interactivity, use Jupyter Notebook. 
+The code is ready to be used and reproduced the results in the paper. If you use it with a different dataset, please remember that the models are optimised for our problem. Do not forget to adapt them to your personal needs.
 
 ### Data
 
@@ -36,3 +37,5 @@ The hyper-parameters obtained using FLAML are described. It is recommended to re
 ## Cite us
 Thank you for your interest in the SHEEP pipeline.
 If this work was helpful, please do not forget to cite us in your publications.
+
+https://doi.org/10.1051/0004-6361/202243135
