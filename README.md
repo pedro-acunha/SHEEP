@@ -11,8 +11,8 @@ Our approach uses SDSS and WISE photometry, however others types of data (if tab
 You can read the paper here: https://arxiv.org/pdf/2204.02080.pdf .
 
 ## How to use
-This work was made using Python and Jupyter Notebook. For better visualisation and interactivity, use Jupyter Notebook. 
-The code is ready to be used and reproduced the results in the paper. If you use it with a different dataset, please remember that the models are optimised for our problem. Do not forget to adapt them to your personal needs.
+This work was made using Python and Jupyter Notebooks. For better visualisation and interactivity, use Jupyter Notebook.
+The code is ready to be used and reproduced the results in the paper. If you use it with a different dataset, please remember that the models are optimised for SDSS DR15+WISE. Do not forget to change them according to your dataset.
 
 ### Data
 
